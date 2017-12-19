@@ -1,0 +1,369 @@
+---
+title: "The_Presentation"
+author: "alahmadi"
+date: "December 18, 2017"
+output: ioslides_presentation
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+# Introduction 
+In this report I analyze the tweets about the company Airbnb. Airbnb is the most tweeted brand in 2017, therefore it will be interesting to analyze the tweets associated with the brand. I here acquire the tweets from twitter using the package TwitterR and analyze the tweets. That is, I analyze the words associated with brand, and their frequencies. I also analyze the tweets sentiments.  
+
+``` {r, message=F, warning=F, results = 'hide', echo = FALSE}
+#  library(devtools)
+# 
+# 
+# 
+# # I saved the urls to the latest versions of the pakcages from CRAN archive
+#  rtem_url <- "https://cran.r-project.org/src/contrib/Archive/Rstem/Rstem_0.4-1.tar.gz"
+#  sentiment_url <- "https://cran.r-project.org/src/contrib/Archive/sentiment/sentiment_0.2.tar.gz"
+# 
+# # use devtools function install_url() to install the packages from the urls
+#  install_url(rtem_url)
+#  install_url(sentiment_url)
+#  install.packages("Hmisc")
+# # load the libraries
+#  library(Rstem)
+#  library(sentiment)
+```
+
+
+```{r, message=F, warning=F, echo=FALSE}
+
+# Installing package if not already installed (Stanton 2013)
+EnsurePackage<-function(x)
+{x <- as.character(x)
+ if (!require(x,character.only=TRUE))
+ {
+   install.packages(pkgs=x,repos="http://cran.r-project.org")
+   require(x,character.only=TRUE)
+ }
+}
+
+
+
+#Identifying packages required  (Stanton 2013)
+PrepareTwitter<-function()
+{
+  EnsurePackage("twitteR")
+  EnsurePackage("stringr")
+  EnsurePackage("ROAuth")
+  EnsurePackage("RCurl")
+  EnsurePackage("ggplot2")
+  EnsurePackage("reshape")
+  EnsurePackage("tm")
+  EnsurePackage("RJSONIO")
+  EnsurePackage("wordcloud")
+  EnsurePackage("gridExtra")
+  EnsurePackage("plyr")
+  EnsurePackage("leaflet")
+  EnsurePackage("maps")
+  library("Hmisc")
+  library(ggplot2)
+  library(Rstem)
+  library(sentiment)
+}
+
+PrepareTwitter()
+```
+
+
+# Data Acquisition 
+The data is imported from Twitter. I created the function GetTweets in order to search twitter and save the results as a data frame. 
+Meanwhile, the function GetTweetsFrequency calculate the frequency of each word mentioned in any of the tweets.
+
+## Twitter Authentication 
+After installing the Packages, I authenticate access to twitter
+
+```{r,results = 'hide', message=F, warning=F, echo=FALSE}
+
+BRAND = "Airbnb"
+#Function to Authenticate Access to Twitter
+Authentication<-function() {
+  # twitter auth vars
+  BRAND = "Airbnb"
+  CONSUMER_KEY="n0VQmi2OXrFQxoPvYvx2FIknI"
+  CONSUMER_SECRET="hTkHfzJrIzQvpwAJLZAQYoyz3iryEEbX8gBlJloQedr51pNlRw"
+  TOKEN="871919779426308099-Yn40D6rcq7zcC2qJowKB8aUvgSLpZVt"
+  TOKEN_SECRET="aOBkoIl6wJXYcHMgstf9BuK3OapE5DNKMyr0sfycr3tQE"
+  
+  # twitter auth set-up
+  setup_twitter_oauth(consumer_key=CONSUMER_KEY,
+                      consumer_secret=CONSUMER_SECRET,
+                      access_token=TOKEN,
+                      access_secret=TOKEN_SECRET)
+}
+
+Authentication()
+
+```
+
+After the authentication is complete, and we have access to twitter, I acquire the data using the function search_Twitter. Search_Twitter returns a data frame of the tweets. Once I have my data I import the data frame in another function called GetFrequencyTabel that returns a data frame of the words associated with the Apple in the tweets, and the words frequencies. 
+
+
+
+```{r,results = 'hide',message=F, warning=F, echo=FALSE}
+
+Search_Twitter <- function(key_word, n) {
+  # contructing the search clause
+  search_term <- paste0(key_word, ' OR ', key_word)
+
+  # search twitter
+  tweets <- searchTwitter(search_term, n=n, lang="en", retryOnRateLimit=2)
+  
+  # convert to a dataframe and return
+  return (twListToDF(tweets))
+}
+
+```
+
+```{r,results = 'hide', message=F, warning=F, echo=FALSE}
+	GetFrequencyDataframe <- function(twts) {
+	  mach_corpus = Corpus(VectorSource(twts))
+	  
+	  # create document term matrix applying some transformations
+	  tdm = TermDocumentMatrix(mach_corpus,
+	                           control = list(removePunctuation = TRUE,
+	                                          removeNumbers = TRUE,
+	                                          stopwords = TRUE,
+	                                          wordLengths=c(3,Inf),
+	                                          tolower = TRUE))
+	  m = as.matrix(tdm)
+	  
+	  # get word counts in decreasing order
+	  word_freqs = sort(rowSums(m), decreasing=TRUE) 
+	  
+	  # create a data frame with words and their frequencies
+	  dm = data.frame(words=names(word_freqs), freq=word_freqs, ordered = TRUE)
+	  return (dm)
+	}
+```
+
+
+
+
+
+```{r,results = 'hide', message=F, warning=F, echo=FALSE}
+
+# Twitter Search
+
+# create a dataframe of the tweets using the BRAND name and n = number of tweets to search.
+df_tweets = Search_Twitter(BRAND, 2000)
+
+# create a data frame that measure the frequency of each word assosiated with the BRAND
+fr = GetFrequencyDataframe(df_tweets)
+
+
+```
+
+#Cleaning the data 
+After I have acquired the data, I now clean it by removing the unused columns from the data frame, and by omitting any rows with a missing value. 
+
+
+## Cleaning the frequency data frame. 
+I reorder the frequency data frame, and remove the words with frequency of one. Hence, they have little to no significance in the analysis. 
+
+```{r,results = 'hide', message=F, warning=F, echo=FALSE}
+# reordering the frequency col in fr. 
+fr = fr[with(fr, order(-freq)),]
+
+# removing the words with frequency = 1
+fr = fr[!fr$freq == 1,]
+
+
+# clean fr from ("https", BRAND, "rt")
+fr.clean = fr[!fr$word == "https",]
+fr.clean = fr.clean[!fr.clean$word == BRAND,]
+fr.clean = fr.clean[!fr.clean$word == "rt", ]
+fr.clean = fr.clean[!fr.clean$word == "co", ]
+fr.clean = fr.clean[!fr.clean$word == "com", ]
+fr.clean = fr.clean[!fr.clean$word == "airbnb", ]
+fr.clean = fr.clean[!fr.clean$word == "http", ]
+```
+
+## Cleaning the tweets data frame. 
+
+In this part I will be removing the unwanted columns and the rows with missing tweets. Since the number of the geocoded tweets is usually very low, I will divide the data frame into two; the first with the columns needed for analysis, and the second for the geocoded tweets. Then I will clean the data frames from missing values.
+
+```{r,results = 'hide', message=F, warning=F,echo=FALSE}
+#keeping only the needed columns of the tweets data frame 
+df_tweets.1 <- subset(df_tweets, select = c("text", "retweeted", "isRetweet"))
+
+df_tweets.1 = na.omit(df_tweets.1) # removing the rows with missing values. 
+
+df_tweets.map = subset(df_tweets, select = c("longitude", "latitude"))
+df_tweets.map = na.omit(df_tweets.map)
+
+```
+
+
+# Exploratory Data Analysis
+
+# Descriptive statistics
+
+## Histogram. 
+The Histogram represent the distribution of the frequencies of the words associated with the brand. The histogram is a visual tool which, infer the same conclusion from the values of the descriptive statistics.
+ 
+```{r,echo=FALSE}
+# building a histogram for the frequencies of the different words after cleaned. 
+
+h = hist(fr.clean$freq, main = "Histogram of the words frequency", xlab = "Words' Frequencies")
+
+```
+
+## Sentimental analysis
+In this part of the report I use the function sentimentalTabel() to analyze the sentiment of the tweets collected. Since I acquired a large number of tweets, the sentimental analysis of the dataset I have should reflect the population's. It is clear that most of the tweets about Airbnb are positive, which indicates satisfaction of the services they provide.
+
+## The plot
+```{r, echo=FALSE}
+
+	#SENTIMENTAL ANALYSIS
+	sentimentalTable <- function(twts_txt){
+	  
+	  twts_class_emo = classify_emotion(twts_txt, algorithm="bayes", prior=1.0)
+	  emotion = twts_class_emo[,7]
+	  emotion[is.na(emotion)] = "unknown"
+	  
+	  twts_class_pol = classify_polarity(twts_txt, algorithm="bayes")
+	  polarity = twts_class_pol[,4]
+	  
+	  sentiment_dataframe = data.frame(text=twts_txt, emotion=emotion, polarity=polarity, stringsAsFactors=FALSE)
+	  sentiment_dataframe = within(sentiment_dataframe, emotion <- 
+	                                 factor(emotion, levels=names(sort(table(emotion), decreasing=TRUE))))
+
+	  sentiment_dataframe = sentiment_dataframe[sentiment_dataframe$emotion!= "unknown", ]# removing the rows with an unknown emotion. 
+    ggplot(sentiment_dataframe, aes(x=polarity)) +
+    	          geom_bar(aes(y=..count.., fill=polarity)) +
+    	          scale_fill_brewer(palette="RdGy") +
+    	          theme(legend.position="right") + ylab("Number of Tweets") + xlab("Polarity Categories")
+    	
+    ggplot(sentiment_dataframe, aes(x=emotion)) + geom_bar(aes(y=..count.., fill=emotion)) +
+    	          scale_fill_brewer(palette="Dark2") +
+    	          theme(legend.position="right") + ylab("Number of Tweets") + xlab("Emotion Categories")
+
+}
+
+# takes a dataframe of tweet objects then extracts and cleans text
+CleanTweets <- function(df) {
+  # extract text
+  clean_text = df$text
+      
+  #removes emoticons #ref: (Hicks , 2014)
+  clean_text <- sapply(clean_text,function(row) iconv(row, "latin1", "ASCII", sub=""))
+  clean_text = gsub("&amp", "", clean_text)       # & sign
+  clean_text = gsub("(RT|via)((?:\\b\\W*@\\w+)+)", "", clean_text)  #retweets
+  clean_text = gsub("@\\w+", "", clean_text)        # @'s
+  clean_text = gsub("[[:punct:]]", "", clean_text)  # punctuation
+  clean_text = gsub("[[:digit:]]", "", clean_text)  # digits
+  clean_text = gsub("http\\w+", "", clean_text)     # urls
+  clean_text = gsub("[ \t]{2,}", "", clean_text)    # brakets curly and sq
+  clean_text = gsub("^\\s+|\\s+$", "", clean_text)  # spaces
+      
+  # remove common words 
+  # collected common words in english
+  common_words <- c('the', 'and', 'that', 'not', 'you', 'this', 'but',
+                    'his', 'they', 'her', 'she', 'will', 'one', 'all',
+                    'would', 'there', 'the', 'for', 'with', 'from', 
+                    'about', 'into', 'over', 'after')
+  for (word in common_words) {
+    clean_text = gsub(word, "", clean_text)
+  }
+      
+  # also the search term!
+  clean_text = gsub(tolower(BRAND), "", clean_text)
+  clean_text = gsub(capitalize(BRAND), "", clean_text)
+  
+  return (clean_text)
+}
+
+sentimentalTable(CleanTweets(df_tweets))
+	
+```
+
+
+
+## Bar charts 
+The following bar chart represents the classification of the tweet from the perspective of it being a retweet.
+ 
+
+```{r, echo=FALSE}
+# Grouped Bar Plot ( to measure if the tweet was a retweet)
+
+counts <- table(df_tweets.1$isRetweet)
+barplot(counts, main="Is the Tweet a Retweet"
+        , col=c("darkblue","red"),
+        legend = rownames(counts), beside=TRUE)
+
+```
+
+
+The following bar chart account for the most used words with brands name. Here I analyze the tail of the frequency distribution. From the bar chart I can conclude that the most associated words with the brand Airbnb are: Iphone, Android, Download, and others.
+
+
+```{r, echo=FALSE}
+
+# # constructing a pie chart with the words that are associated with the brand
+
+fr.clean.head = head(fr.clean,10)
+bar.clean = barplot(as.numeric(fr.clean.head$freq), col = c("lightblue", "mistyrose",
+                "lightcyan", "lavender", "red", "blue", "orange", "cornsilk","darkblue","yellow" ),
+                    legend = rownames(fr.clean.head))
+
+
+```
+
+
+## Probability Equation 
+
+I constructed an equation that measure the probability of any word to be associated with the Brand depending on the sample of the tweets I have Acquired, using an if statement. For example, I used the word Canada and the following is the probability that the word Canada is associated with the Airbnb.
+
+
+```{r}
+y = "canada"# enter the word you want to test other than the brands name. 
+
+# the if statement make sure that the word is already used otherwise it returns the value 0   
+if (y %in% fr.clean$word) {
+  
+  u = fr.clean[which(fr.clean$word == y),]
+  num = as.numeric(u$freq)
+  p = (num/sum(as.numeric(fr.clean$freq)))*100
+  
+}else{
+  p = 0
+}
+# p is the probability that the word y is used in the same tweet the BRAND is mentioned. 
+p
+
+
+```
+
+## The Map
+Here I used the package leaflet to construct a map that shows the location of the geocoded tweets. From the map it seems that most of Airbnb services are available in North America. However, I cannot infer that this is always true because of the small sample of geocoded tweets available.
+
+## Map
+```{r, echo=FALSE}
+
+# m is the map 
+# creating the base for m 
+m <- leaflet(map) %>% addTiles()
+
+#adding the locations of the tweets. 
+m %>% addCircles(map, lng = as.numeric(df_tweets.map$longitude), lat = as.numeric(df_tweets.map$latitude), popup = NULL, 
+                 weight = 8, radius = 40, color = "#fb3004", stroke = TRUE, fillOpacity = 0.8)
+
+
+
+```
+
+
+
+
+
+
+
+
+
+
