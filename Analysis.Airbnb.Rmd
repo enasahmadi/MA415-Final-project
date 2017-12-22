@@ -7,6 +7,7 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+chooseCRANmirror(graphics=FALSE, ind=1)
 ```
 
 # Introduction 
@@ -22,19 +23,21 @@ Some of the libraries are not supported by CRAN so using install.packages() won'
 
 
 ``` {r, message=F, warning=F, results = 'hide'}
- library(devtools)
+ require(devtools)
+
+  library(devtools)
 
 
 
- I saved the urls to the latest versions of the pakcages from CRAN archive
+# I saved the urls to the latest versions of the pakcages from CRAN archive
  rtem_url <- "https://cran.r-project.org/src/contrib/Archive/Rstem/Rstem_0.4-1.tar.gz"
  sentiment_url <- "https://cran.r-project.org/src/contrib/Archive/sentiment/sentiment_0.2.tar.gz"
 
- use devtools function install_url() to install the packages from the urls
- install_url(rtem_url)
+#use devtools function install_url() to install the packages from the urls
+install_url(rtem_url)
 install_url(sentiment_url)
 install.packages("Hmisc")
-load the libraries
+#load the libraries
 library(Rstem)
 library(sentiment)
 ```

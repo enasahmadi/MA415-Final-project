@@ -7,27 +7,28 @@ output: ioslides_presentation
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE)
+chooseCRANmirror(graphics=FALSE, ind=1)
 ```
 
 # Introduction 
 In this report I analyze the tweets about the company Airbnb. Airbnb is the most tweeted brand in 2017, therefore it will be interesting to analyze the tweets associated with the brand. I here acquire the tweets from twitter using the package TwitterR and analyze the tweets. That is, I analyze the words associated with brand, and their frequencies. I also analyze the tweets sentiments.  
 
 ``` {r, message=F, warning=F, results = 'hide', echo = FALSE}
-#  library(devtools)
-# 
-# 
-# 
-# # I saved the urls to the latest versions of the pakcages from CRAN archive
-#  rtem_url <- "https://cran.r-project.org/src/contrib/Archive/Rstem/Rstem_0.4-1.tar.gz"
-#  sentiment_url <- "https://cran.r-project.org/src/contrib/Archive/sentiment/sentiment_0.2.tar.gz"
-# 
-# # use devtools function install_url() to install the packages from the urls
-#  install_url(rtem_url)
-#  install_url(sentiment_url)
-#  install.packages("Hmisc")
-# # load the libraries
-#  library(Rstem)
-#  library(sentiment)
+ library(devtools)
+
+
+
+# I saved the urls to the latest versions of the pakcages from CRAN archive
+ rtem_url <- "https://cran.r-project.org/src/contrib/Archive/Rstem/Rstem_0.4-1.tar.gz"
+ sentiment_url <- "https://cran.r-project.org/src/contrib/Archive/sentiment/sentiment_0.2.tar.gz"
+
+# use devtools function install_url() to install the packages from the urls
+ install_url(rtem_url)
+ install_url(sentiment_url)
+ install.packages("Hmisc")
+# load the libraries
+ library(Rstem)
+ library(sentiment)
 ```
 
 
